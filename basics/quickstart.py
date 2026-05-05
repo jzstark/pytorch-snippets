@@ -59,16 +59,43 @@ epochs = 5
 
 def train(dataloader, model, loss_fn, optimizer):
     model.train()
-    for epoch in range(epochs):
+
+    for batch, (X, y) in enumerate(dataloader):
+        yy = model.forward(X.to(device))
+        loss = loss_fn(yy, y.to(device))
+
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        if batch % 100 == 0:
+            print(f"Ar the batch {batch}: loss： {loss.item()}")
+
+
+def test(dataloader, model, loss_fn):
+    model.eval()
+    loss_sum = 0
+    correct = 0
+    batches = len(dataloader) # batch 数量
+    size = len(dataloader.dataset) # 总个数
+    with torch.no_grad():
         for batch, (X, y) in enumerate(dataloader):
+            X, y = X.to(device), y.to(device)
             yy = model.forward(X.to(device))
             loss = loss_fn(yy, y.to(device))
+            loss_sum += loss.item()
+            correct += (yy.argmax(1) == y).type(torch.float).sum().item()
+    loss_avg = loss_sum / batches
+    correct  /= size
+    print(f"Loss at test time: {loss_avg}; correct prediction rate {correct}" )
 
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+for _ in range(epochs):
+    train(train_dataloader, model, loss_fn, optimizer)
+    test(test_dataloader, model, loss_fn)
 
-            if batch % 100 == 0:
-                print(f"Ar the batch {batch} / epoch {epoch}: loss： {loss.item()}")
+# Save
+#torch.save(model.state_dict(), "path/to/dir.pth")
 
-train(train_dataloader, model, loss_fn, optimizer)
+# Load
+# model =  NeuralNetwork().to(device)
+# model = torch.load_state_dict(torch.load("path/to/dir.pth", weights_only=True)))
